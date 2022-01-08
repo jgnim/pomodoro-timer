@@ -1,15 +1,8 @@
 import {useState, useEffect} from 'react';
 import styled from 'styled-components';
-import useCountdown from 'react-countdown-hook';
 import WebFont from 'webfontloader';
-import format from 'format-duration';
 import {FiPlay, FiPause, FiRotateCcw} from 'react-icons/fi';
-import Beep from '../audio/beep.wav';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
+import Beep from '../audio/beep.wav'
 
 WebFont.load({
   google: {
@@ -18,48 +11,52 @@ WebFont.load({
 })
 
 const Timer = () => {
-  //All time is in miliseconds
-  const seconds = 1000;
-  const minutes = 1000*60;
+  const seconds = 1;
+  const minutes = 60;
+  let countdown;
   const [sessionLength, setSession] = useState(5); 
   const [breakLength, setBreak] = useState(3);
   const [scale, setScale] = useState(seconds);
   const [phase, setPhase] = useState("Session");
-  const [display, setDisplay] = useState();
-  const [timeLeft, {start, pause, resume, reset}] = useCountdown(sessionLength*scale);
+  const [timeLeft, setTimeLeft] = useState(sessionLength*scale);
+  const [remainingMinutes, setRemainingMinutes] = useState();
+  const [remainingSeconds, setRemainingSeconds] = useState();
+  const [radio, setRadio] = useState("seconds-scale");
+  const [running, setRunning] = useState(false);
   
   useEffect(()=>{
-    setPhase("Session");
-    start(sessionLength*scale);
-    setDisplay(format(timeLeft));  
-    pause(); 
-  }, [])
+    running ? 
+      countdown = setInterval(()=>{
+        setTimeLeft(prev => prev-1);
+        }, 1000) 
+      : clearInterval(countdown);    
+    return () => clearInterval(countdown);
+  }, [running])
   
-  useEffect(()=>{     
-    reset();
-    setPhase("Session");        
-    start(sessionLength*scale);    
-    setDisplay(format(timeLeft));
+  useEffect(()=>{  
+    setPhase("Session");
+    setTimeLeft(sessionLength*scale); 
   }, [sessionLength, scale])
    
   useEffect(()=>{
-    setDisplay(format(timeLeft));    
-    if (timeLeft === 0) {       
+    display(timeLeft);
+    if (timeLeft === 0) {  
+      setRunning(false);     
       let sound = new Audio(Beep);
-      sound.volume = 0.3;
+      sound.volume = 0.1;
       sound.play();   
       if (phase == "Session"){
         setTimeout(()=>{
           setPhase("Break");
-          start(breakLength*scale);
-          setDisplay(format(timeLeft));  
+          setTimeLeft(breakLength*scale);
+          setRunning(true);
         }, 1500);        
       }
       else {
         setTimeout(()=>{
           setPhase("Session");
-          start(sessionLength*scale);
-          setDisplay(format(timeLeft));
+          setTimeLeft(sessionLength*scale);
+          setRunning(true);
         }, 1500);
         
       }
@@ -71,6 +68,7 @@ const Timer = () => {
 
   //Decrementing time, time cannot be 0
   const decrement = (e) => {
+    setRunning(false);
     if (e.target.value === "session" && sessionLength > 1) {
       setSession(prev => prev - 1);
     }
@@ -81,6 +79,7 @@ const Timer = () => {
 
   //Incrementing time
   const increment = (e) => {
+    setRunning(false);
     if (e.target.value === "session") {
       setSession(prev => prev + 1);
     }
@@ -89,25 +88,39 @@ const Timer = () => {
     }    
   }
 
-  const resetTimer = () => {    
-    reset();
-    setPhase("Session");
-    start(sessionLength*scale);
-  }
-
-  const scaleChange = (e) => {    
-    if (e.target.value == "seconds") {
-      reset();
+  const scaleChange = (e) => {
+    setRunning(false);
+    if (e.target.value === "seconds-scale") {
       setScale(seconds);
-      setPhase("Session");
-      start(sessionLength*scale);
+      setRadio(e.target.value);
     }
     else {
-      reset();
       setScale(minutes);
-      setPhase("Session");
-      start(sessionLength*scale);
+      setRadio(e.target.value);
     }
+  }
+
+  const display = (time) => {
+    Math.floor(time/60) === 0 ? 
+      setRemainingMinutes("00")
+      : setRemainingMinutes(Math.floor(time/60));
+    time%60 < 10 ? 
+      setRemainingSeconds(`0${time%60}`)
+      : setRemainingSeconds(time % 60);
+  }
+
+  const play = () => {
+    setRunning(true);
+  }
+
+  const pause = (countdown) => {
+    setRunning(false);
+  }
+
+  const reset = () => {
+    setRunning(false);
+    setPhase("Session");
+    setTimeLeft(sessionLength*scale);
   }
   
   return (
@@ -115,17 +128,23 @@ const Timer = () => {
       <div>
         <h1>Pomodoro Timer</h1>
       </div>
-      <FormControl component="fieldset">
-        <FormLabel component="legend" color="success">
-          <span style={{color: "white"}}>Scale</span>
-        </FormLabel>
-        <RadioGroup row aria-label="scale" defaultValue="seconds" name="row-radio-buttons-group" onChange={scaleChange}>
-          <FormControlLabel value="seconds" control={<Radio />} label="Seconds" />
-          <FormControlLabel value="minutes" control={<Radio />} label="Minutes" />
-        </RadioGroup>
-      </FormControl>      
+      <form>
+        <label>
+          Scale
+          <div>
+          <label style={{padding: "10px"}} >
+            <input type="radio" name="scale" value="seconds-scale" onChange={scaleChange} checked={radio==="seconds-scale"}/>            
+            Seconds
+          </label>
+          <label style={{padding: "10px"}} >              
+            <input type="radio" name="scale" value="minutes-scale" onChange={scaleChange} checked={radio==="minutes-scale"}/>
+            Minutes
+          </label> 
+          </div> 
+        </label>
+      </form>
       <Selectors>
-        <Session>
+        <div>
           <h3>
             Session Length
           </h3>
@@ -134,8 +153,8 @@ const Timer = () => {
             <div id="session-length">{sessionLength}</div>
             <Button id="session-increment" onClick={increment} value="session"> + </Button>
           </Label>
-        </Session>
-        <Break>
+        </div>
+        <div>
           <h3>
             Break Length
           </h3>
@@ -144,20 +163,20 @@ const Timer = () => {
             <div id="break-length">{breakLength}</div>
             <Button id="break-increment" onClick={increment} value="break"> + </Button>
           </Label>
-        </Break>
+        </div>
       </Selectors>              
       <TimerWrapper>
         <div id="timer-label"> 
           {phase}
         </div>
         <div id="time-left">
-          {display}
+          {remainingMinutes}:{remainingSeconds}
         </div>
       </TimerWrapper>
       <ControlButton>
-        <Button id="start"><FiPlay onClick={resume}/></Button>
+        <Button id="start"><FiPlay onClick={play}/></Button>
         <Button id="stop"><FiPause onClick={pause}/></Button>
-        <Button id="reset"><FiRotateCcw onClick ={resetTimer}/></Button>
+        <Button id="reset"><FiRotateCcw onClick={reset}/></Button>
       </ControlButton> 
     </Wrapper>
   ) 
@@ -193,9 +212,6 @@ const ControlButton = styled(Label)`
   justify-content: space-evenly;
 `
 
-const Session = styled.div``;
-const Break = styled.div``;
-
 const TimerWrapper = styled.div`
   position: relative;  
   border: 5px solid #112647;
@@ -213,5 +229,8 @@ const Button = styled.button`
   font-size: 1em;
   padding-left: 20px;
   padding-right: 20px;  
+  &:hover {
+    cursor: pointer;
+  }
 `;
 
