@@ -13,23 +13,26 @@ WebFont.load({
 const Timer = () => {
   const seconds = 1;
   const minutes = 60;
-  let countdown;
+  let countdown, remainingMinutes, remainingSeconds;
   const [sessionLength, setSession] = useState(5); 
   const [breakLength, setBreak] = useState(3);
   const [scale, setScale] = useState(seconds);
   const [phase, setPhase] = useState("Session");
   const [timeLeft, setTimeLeft] = useState(sessionLength*scale);
-  const [remainingMinutes, setRemainingMinutes] = useState();
-  const [remainingSeconds, setRemainingSeconds] = useState();
   const [radio, setRadio] = useState("seconds-scale");
   const [running, setRunning] = useState(false);
+
+  Math.floor(timeLeft/60) === 0 ? 
+    remainingMinutes = "00" :
+    remainingMinutes = Math.floor(timeLeft/60);
+  timeLeft%60 < 10 ? 
+    remainingSeconds = `0${timeLeft%60}` : 
+    remainingSeconds = timeLeft % 60;
   
   useEffect(()=>{
     running ? 
-      countdown = setInterval(()=>{
-        setTimeLeft(prev => prev-1);
-        }, 1000) 
-      : clearInterval(countdown);    
+      countdown = setInterval(()=>{setTimeLeft(prev => prev-1);}, 1000) : 
+      clearInterval(countdown);    
     return () => clearInterval(countdown);
   }, [running])
   
@@ -39,7 +42,6 @@ const Timer = () => {
   }, [sessionLength, scale])
    
   useEffect(()=>{
-    display(timeLeft);
     if (timeLeft === 0) {  
       setRunning(false);     
       let sound = new Audio(Beep);
@@ -57,8 +59,7 @@ const Timer = () => {
           setPhase("Session");
           setTimeLeft(sessionLength*scale);
           setRunning(true);
-        }, 1500);
-        
+        }, 1500);        
       }
     }
     return () => {
@@ -98,23 +99,6 @@ const Timer = () => {
       setScale(minutes);
       setRadio(e.target.value);
     }
-  }
-
-  const display = (time) => {
-    Math.floor(time/60) === 0 ? 
-      setRemainingMinutes("00")
-      : setRemainingMinutes(Math.floor(time/60));
-    time%60 < 10 ? 
-      setRemainingSeconds(`0${time%60}`)
-      : setRemainingSeconds(time % 60);
-  }
-
-  const play = () => {
-    setRunning(true);
-  }
-
-  const pause = (countdown) => {
-    setRunning(false);
   }
 
   const reset = () => {
@@ -170,12 +154,12 @@ const Timer = () => {
           {phase}
         </div>
         <div id="time-left">
-          {remainingMinutes}:{remainingSeconds}
+          {remainingMinutes} : {remainingSeconds}
         </div>
       </TimerWrapper>
       <ControlButton>
-        <Button id="start"><FiPlay onClick={play}/></Button>
-        <Button id="stop"><FiPause onClick={pause}/></Button>
+        <Button id="start"><FiPlay onClick={()=>{setRunning(true)}}/></Button>
+        <Button id="stop"><FiPause onClick={()=>{setRunning(false);}}/></Button>
         <Button id="reset"><FiRotateCcw onClick={reset}/></Button>
       </ControlButton> 
     </Wrapper>
