@@ -13,7 +13,7 @@ WebFont.load({
 const Timer = () => {
   const seconds = 1;
   const minutes = 60;
-  let countdown, remainingMinutes, remainingSeconds;
+  let countdown;  
   const [sessionLength, setSession] = useState(5); 
   const [breakLength, setBreak] = useState(3);
   const [scale, setScale] = useState(seconds);
@@ -22,12 +22,13 @@ const Timer = () => {
   const [radio, setRadio] = useState("seconds-scale");
   const [running, setRunning] = useState(false);
 
-  Math.floor(timeLeft/60) === 0 ? 
-    remainingMinutes = "00" :
-    remainingMinutes = Math.floor(timeLeft/60);
-  timeLeft%60 < 10 ? 
-    remainingSeconds = `0${timeLeft%60}` : 
-    remainingSeconds = timeLeft % 60;
+  const remainingMinutes = Math.floor(timeLeft/60) < 10 ?
+    `0${Math.floor(timeLeft/60)}` :
+    Math.floor(timeLeft/60);
+  
+  const remainingSeconds = timeLeft%60 < 10 ? 
+    `0${timeLeft%60}` : 
+    timeLeft % 60;
   
   useEffect(()=>{
     running ? 
